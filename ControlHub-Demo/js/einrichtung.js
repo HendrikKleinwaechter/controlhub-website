@@ -63,6 +63,7 @@ class Einrichtung {
     document.addEventListener('controllerinfo', () => this.neuZeichnen());
     document.addEventListener('tabchanged', () => { if (this.lauf && EINR_SEITEN[this.lauf.schritt]) this.leisteZeichnen(); });
     document.addEventListener('kalibrierung-stand', e => { if (this.stand) { this.stand.kalibrierung = e.detail; this.neuZeichnen(); } });
+    document.addEventListener('mod-status-neu', () => { this.modStand = undefined; this.neuZeichnen(); });   // „Mod installieren“
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.tourLauf && !document.querySelector('.ui-dialog')) this.tourEnde(); });
     window.addEventListener('resize', () => this.tourPlatzieren());
   }
@@ -386,14 +387,20 @@ class Einrichtung {
   karte_spieldaten() {
     const g = window.gameSwitcher?.activeGame;
     const ls25 = g?.telemetry === 'fs25';
+    // Mod-Zustand einmal laden (25.10.2026, „Mod installieren“), danach neu zeichnen
+    if (ls25 && this.modStand === undefined && window.modInstall) {
+      this.modStand = null;
+      window.modInstall.laden().then(st => { this.modStand = st; this.neuZeichnen(); });
+    }
     const status = this.spieldaten
       ? '<div class="einr-status ok"><span class="sw-dot on"></span><span><b>Spieldaten kommen an</b></span></div>'
       : '<div class="einr-status"><span class="sw-dot"></span><span>Wartet auf das Spiel …</span></div>';
     return {
       titel: `Spieldaten aus ${g?.name || 'dem Spiel'}`,
       html: `<p>Für Werte, Karte, Arbeitsplaner und GPS braucht das Spiel eine kleine Mod. Sie liest nur Werte aus und löst selbst nichts im Spiel aus.</p>
-        ${ls25 ? `<ol class="einr-liste"><li><b>FS25_CraftConsoleHUD.zip</b> in den Mod-Ordner kopieren: <code>Dokumente\\My Games\\FarmingSimulator2025\\mods</code>. Nicht entpacken, nur eine Fassung.</li>
-          <li>Das Spiel starten und beim Laden des Spielstands die Mod aktivieren.</li></ol>` : ''}
+        ${ls25 ? `<ol class="einr-liste"><li>Die Mod in den Mod-Ordner des Spiels bringen: mit dem Knopf unten, oder von Hand <b>FS25_CraftConsoleHUD.zip</b> (im ControlHub-Ordner unter <code>Mod</code>) nach <code>Dokumente\\My Games\\FarmingSimulator2025\\mods</code> kopieren. Nicht entpacken, nur eine Fassung.</li>
+          <li>Das Spiel starten und beim Laden des Spielstands die Mod aktivieren.</li></ol>
+          <div class="einr-mod">${window.modInstall ? window.modInstall.html(this.modStand) : ''}</div>` : ''}
         ${status}
         <p class="einr-klein">Ohne Mod funktionieren Belegung, Makros und eigene Kacheln trotzdem. Du kannst das auch später erledigen (Handbuch, Kapitel 2.4).</p>`,
       weiter: this.spieldaten ? 'Weiter' : 'Später erledigen'

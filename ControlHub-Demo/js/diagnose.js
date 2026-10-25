@@ -10,6 +10,7 @@
   class DiagnoseSeite {
     constructor() {
       document.addEventListener('tabchanged', e => { if (e.detail?.tabName === 'status') this.laden(); });
+      document.addEventListener('mod-status-neu', () => { if (this.body?.offsetParent) this.laden(); });   // nach „Mod installieren“
     }
     get body() { return document.getElementById('diagnose-body'); }
 
@@ -44,9 +45,15 @@
         : `Spieldaten: ${sd.modVersion ? `Mod ${esc(sd.modVersion)}` : 'Mod älter als 0.7.9'} · ${rolle}`;
       const alt = sd?.stand === 'ok' && !sd.modVersion
         ? '<p class="setting-hint">Für den Mehrspieler die Mod 0.7.9 oder neuer einspielen, als Gast beim Gastgeber bzw. auf dem Server.</p>' : '';
+      // Mod im Mod-Ordner (25.10.2026, „Mod installieren“): nur beim LS25
+      const fs25 = window.gameSwitcher?.activeGame?.telemetry === 'fs25';
       this.body.innerHTML = `<p class="diag-arm ${st && ['watchdog', 'absturz'].includes(st.grund) ? 'warn' : ''}">${arm}</p>
         <p class="diag-arm ${alt ? 'warn' : ''}">${spiel}</p>${alt}
+        ${fs25 ? '<div id="diag-mod"></div>' : ''}
         ${liste ? `<ul class="diag-liste">${liste}</ul>` : '<p class="setting-hint">Noch keine Meldungen seit dem Start.</p>'}`;
+      if (fs25 && window.modInstall) {
+        window.modInstall.laden().then(m => { const el = document.getElementById('diag-mod'); if (el) el.innerHTML = window.modInstall.html(m); });
+      }
     }
 
     async datei() {
